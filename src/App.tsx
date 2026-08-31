@@ -16,16 +16,23 @@ import { Tracker, Geofence, Alert } from './types';
 import { Navigation, Lock, LogIn, ArrowLeft } from 'lucide-react';
 
 interface MainDashboardProps {
+  initialTab?: string;
   onReturnToLanding: () => void;
 }
 
-const MainDashboard: React.FC<MainDashboardProps> = ({ onReturnToLanding }) => {
-  const [activeTab, setActiveTab] = useState('live');
+const MainDashboard: React.FC<MainDashboardProps> = ({ initialTab = 'live', onReturnToLanding }) => {
+  const [activeTab, setActiveTab] = useState(initialTab);
   const [trackers, setTrackers] = useState<Tracker[]>([]);
   const [geofences, setGeofences] = useState<Geofence[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
   const [selectedTrackerId, setSelectedTrackerId] = useState<string | null>(null);
   const [isSocketConnected, setIsSocketConnected] = useState(false);
+
+  useEffect(() => {
+    if (initialTab) {
+      setActiveTab(initialTab);
+    }
+  }, [initialTab]);
 
   // Fetch initial fleet data
   const loadFleetData = async () => {
@@ -253,6 +260,14 @@ const LoginScreen: React.FC<{ onReturnToLanding: () => void }> = ({ onReturnToLa
 const AppContent: React.FC = () => {
   const { user, loading } = useAuth();
   const [viewState, setViewState] = useState<'LANDING' | 'APP'>('LANDING');
+  const [targetTab, setTargetTab] = useState<string>('live');
+
+  useEffect(() => {
+    if (window.location.search.includes('mode=tracker')) {
+      setViewState('APP');
+      setTargetTab('simulator');
+    }
+  }, []);
 
   if (loading) {
     return (
@@ -265,14 +280,20 @@ const AppContent: React.FC = () => {
   if (viewState === 'LANDING') {
     return (
       <LandingPage
-        onLaunchDashboard={() => setViewState('APP')}
-        onOpenMobileTracker={() => setViewState('APP')}
+        onLaunchDashboard={() => {
+          setTargetTab('live');
+          setViewState('APP');
+        }}
+        onOpenMobileTracker={() => {
+          setTargetTab('simulator');
+          setViewState('APP');
+        }}
       />
     );
   }
 
   return user ? (
-    <MainDashboard onReturnToLanding={() => setViewState('LANDING')} />
+    <MainDashboard initialTab={targetTab} onReturnToLanding={() => setViewState('LANDING')} />
   ) : (
     <LoginScreen onReturnToLanding={() => setViewState('LANDING')} />
   );
