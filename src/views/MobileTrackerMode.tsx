@@ -29,9 +29,9 @@ export const MobileTrackerMode: React.FC<MobileTrackerModeProps> = ({
   onRefresh,
   isStandaloneMobileView = false
 }) => {
-  const [selectedTrackerCode, setSelectedTrackerCode] = useState<string>(
-    trackers[0]?.trackerCode || localStorage.getItem('trackx_mobile_code') || 'TRK-928374'
-  );
+  const [selectedTrackerCode, setSelectedTrackerCode] = useState<string>(() => {
+    return trackers[0]?.trackerCode || localStorage.getItem('trackx_mobile_code') || `TRK-${Math.floor(100000 + Math.random() * 900000)}`;
+  });
   const [trackingMode, setTrackingMode] = useState<'REAL_GPS' | 'SIMULATED'>('REAL_GPS');
   const [isTracking, setIsTracking] = useState(false);
   const [isOfflineSimulated, setIsOfflineSimulated] = useState(false);

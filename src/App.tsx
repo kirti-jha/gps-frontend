@@ -72,9 +72,21 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ initialTab = 'live', onRe
       setTrackers(data);
     });
 
+    socket.on('tracker:created', (newTracker: Tracker) => {
+      setTrackers(prev => {
+        if (prev.some(t => t.id === newTracker.id || t.trackerCode === newTracker.trackerCode)) return prev;
+        return [newTracker, ...prev];
+      });
+    });
+
     socket.on('tracker:location', (data: any) => {
-      setTrackers(prev =>
-        prev.map(t => {
+      setTrackers(prev => {
+        const exists = prev.some(t => t.id === data.trackerId);
+        if (!exists) {
+          loadFleetData();
+          return prev;
+        }
+        return prev.map(t => {
           if (t.id === data.trackerId) {
             return {
               ...t,
@@ -88,8 +100,8 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ initialTab = 'live', onRe
             };
           }
           return t;
-        })
-      );
+        });
+      });
     });
 
     socket.on('tracker:status', (data: any) => {
@@ -106,6 +118,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ initialTab = 'live', onRe
       socket.off('connect');
       socket.off('disconnect');
       socket.off('trackers:init');
+      socket.off('tracker:created');
       socket.off('tracker:location');
       socket.off('tracker:status');
       socket.off('alert:created');
