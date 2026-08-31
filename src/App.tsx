@@ -10,11 +10,16 @@ import { ReportsView } from './views/ReportsView';
 import { MobileTrackerMode } from './views/MobileTrackerMode';
 import { TripsView } from './views/TripsView';
 import { DeviceManagerView } from './views/DeviceManagerView';
+import { LandingPage } from './views/LandingPage';
 import { apiRequest, getSocket } from './services/api';
 import { Tracker, Geofence, Alert } from './types';
-import { Navigation, Lock, LogIn } from 'lucide-react';
+import { Navigation, Lock, LogIn, ArrowLeft } from 'lucide-react';
 
-const MainDashboard: React.FC = () => {
+interface MainDashboardProps {
+  onReturnToLanding: () => void;
+}
+
+const MainDashboard: React.FC<MainDashboardProps> = ({ onReturnToLanding }) => {
   const [activeTab, setActiveTab] = useState('live');
   const [trackers, setTrackers] = useState<Tracker[]>([]);
   const [geofences, setGeofences] = useState<Geofence[]>([]);
@@ -115,7 +120,17 @@ const MainDashboard: React.FC = () => {
           setActiveTab={setActiveTab}
           unreadAlertsCount={unreadAlertsCount}
         />
-        <main className="flex-1 h-full overflow-hidden bg-dark-900">
+        <main className="flex-1 h-full overflow-hidden bg-dark-900 relative">
+          {/* Quick back to Landing Page button floating */}
+          <button
+            onClick={onReturnToLanding}
+            className="absolute top-4 right-4 z-40 px-3 py-1.5 rounded-xl bg-dark-800/80 hover:bg-dark-700 border border-dark-600 text-xs font-semibold text-slate-300 hover:text-white transition backdrop-blur-sm flex items-center gap-1.5"
+            title="Return to Landing Page"
+          >
+            <ArrowLeft className="w-3.5 h-3.5" />
+            <span>Landing Site</span>
+          </button>
+
           {activeTab === 'live' && (
             <LiveFleetView
               trackers={trackers}
@@ -138,7 +153,7 @@ const MainDashboard: React.FC = () => {
   );
 };
 
-const LoginScreen: React.FC = () => {
+const LoginScreen: React.FC<{ onReturnToLanding: () => void }> = ({ onReturnToLanding }) => {
   const { login } = useAuth();
   const [email, setEmail] = useState('admin@trackx.com');
   const [password, setPassword] = useState('admin123');
@@ -159,7 +174,15 @@ const LoginScreen: React.FC = () => {
   };
 
   return (
-    <div className="w-screen h-screen bg-dark-900 flex items-center justify-center p-4">
+    <div className="w-screen h-screen bg-dark-900 flex items-center justify-center p-4 relative">
+      <button
+        onClick={onReturnToLanding}
+        className="absolute top-6 left-6 px-4 py-2 rounded-xl bg-dark-800 border border-dark-700 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-2"
+      >
+        <ArrowLeft className="w-4 h-4" />
+        <span>Back to Landing Page</span>
+      </button>
+
       <div className="w-full max-w-md bg-dark-800 border border-dark-700 p-8 rounded-3xl shadow-2xl space-y-6">
         <div className="text-center space-y-2">
           <div className="w-14 h-14 mx-auto rounded-2xl bg-gradient-to-tr from-blue-600 via-indigo-600 to-cyan-400 p-0.5 shadow-xl shadow-blue-500/30">
@@ -229,6 +252,7 @@ const LoginScreen: React.FC = () => {
 
 const AppContent: React.FC = () => {
   const { user, loading } = useAuth();
+  const [viewState, setViewState] = useState<'LANDING' | 'APP'>('LANDING');
 
   if (loading) {
     return (
@@ -238,7 +262,20 @@ const AppContent: React.FC = () => {
     );
   }
 
-  return user ? <MainDashboard /> : <LoginScreen />;
+  if (viewState === 'LANDING') {
+    return (
+      <LandingPage
+        onLaunchDashboard={() => setViewState('APP')}
+        onOpenMobileTracker={() => setViewState('APP')}
+      />
+    );
+  }
+
+  return user ? (
+    <MainDashboard onReturnToLanding={() => setViewState('LANDING')} />
+  ) : (
+    <LoginScreen onReturnToLanding={() => setViewState('LANDING')} />
+  );
 };
 
 export function App() {
