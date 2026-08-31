@@ -168,8 +168,8 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ initialTab = 'live', onRe
 
 const LoginScreen: React.FC<{ onReturnToLanding: () => void }> = ({ onReturnToLanding }) => {
   const { login } = useAuth();
-  const [email, setEmail] = useState('admin@trackx.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('kirti@trackx.com');
+  const [password, setPassword] = useState('836855');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -215,9 +215,9 @@ const LoginScreen: React.FC<{ onReturnToLanding: () => void }> = ({ onReturnToLa
 
         <form onSubmit={handleSubmit} className="space-y-4 text-xs">
           <div>
-            <label className="block text-slate-300 font-semibold mb-1">Email Address</label>
+            <label className="block text-slate-300 font-semibold mb-1">Email / Username</label>
             <input
-              type="email"
+              type="text"
               required
               value={email}
               onChange={e => setEmail(e.target.value)}
@@ -242,21 +242,30 @@ const LoginScreen: React.FC<{ onReturnToLanding: () => void }> = ({ onReturnToLa
             className="w-full py-3.5 bg-blue-600 hover:bg-blue-500 text-white font-extrabold text-sm rounded-xl shadow-lg shadow-blue-600/30 transition flex items-center justify-center gap-2 cursor-pointer"
           >
             <LogIn className="w-4 h-4" />
-            <span>{loading ? 'Authenticating...' : 'Sign In to Dashboard'}</span>
+            <span>{loading ? 'Authenticating...' : 'Sign In to Admin Dashboard'}</span>
           </button>
         </form>
 
-        {/* Quick Demo Sign-In Action */}
-        <button
-          onClick={() => login('admin@trackx.com', 'admin123')}
-          className="w-full py-2.5 bg-emerald-600/20 hover:bg-emerald-600/30 text-emerald-400 border border-emerald-500/30 font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 cursor-pointer"
-        >
-          <span>🚀 Instant Demo Sign-In (Rahul Admin)</span>
-        </button>
+        {/* Quick Instant Sign-In Actions */}
+        <div className="space-y-2 pt-2">
+          <button
+            onClick={() => login('kirti@trackx.com', '836855')}
+            className="w-full py-2.5 bg-blue-600/20 hover:bg-blue-600/30 text-blue-400 border border-blue-500/30 font-bold text-xs rounded-xl transition flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <span>🚀 Instant Sign-In as Kirti (kirti / 836855)</span>
+          </button>
+
+          <button
+            onClick={() => login('admin@trackx.com', 'admin123')}
+            className="w-full py-2 bg-dark-900 hover:bg-dark-700 text-slate-300 border border-dark-700 font-semibold text-xs rounded-xl transition flex items-center justify-center gap-2 cursor-pointer"
+          >
+            <span>Instant Demo Sign-In (Rahul Admin)</span>
+          </button>
+        </div>
 
         <div className="bg-dark-900/60 p-3 rounded-2xl border border-dark-700/60 text-[11px] text-slate-400 text-center space-y-1">
-          <div className="font-bold text-slate-300">DEMO CREDENTIALS</div>
-          <div>Admin: <span className="font-mono text-blue-400">admin@trackx.com</span> / <span className="font-mono text-blue-400">admin123</span></div>
+          <div className="font-bold text-slate-300">ADMIN CREDENTIALS</div>
+          <div>Admin: <span className="font-mono text-blue-400">kirti</span> / <span className="font-mono text-blue-400">836855</span></div>
         </div>
       </div>
     </div>
@@ -265,13 +274,12 @@ const LoginScreen: React.FC<{ onReturnToLanding: () => void }> = ({ onReturnToLa
 
 const AppContent: React.FC = () => {
   const { user, loading } = useAuth();
-  const [viewState, setViewState] = useState<'LANDING' | 'APP'>('LANDING');
+  const [viewState, setViewState] = useState<'LANDING' | 'APP' | 'TRACKER'>('LANDING');
   const [targetTab, setTargetTab] = useState<string>('live');
 
   useEffect(() => {
     if (window.location.search.includes('mode=tracker')) {
-      setViewState('APP');
-      setTargetTab('simulator');
+      setViewState('TRACKER');
     }
   }, []);
 
@@ -279,6 +287,21 @@ const AppContent: React.FC = () => {
     return (
       <div className="w-screen h-screen bg-dark-900 flex items-center justify-center text-slate-400 text-sm">
         Initializing TrackX Platform...
+      </div>
+    );
+  }
+
+  if (viewState === 'TRACKER') {
+    return (
+      <div className="w-screen h-screen bg-dark-900 flex flex-col relative overflow-y-auto">
+        <button
+          onClick={() => setViewState('LANDING')}
+          className="absolute top-4 left-4 z-50 px-3.5 py-2 rounded-xl bg-dark-800/90 border border-dark-700 text-slate-300 hover:text-white text-xs font-bold flex items-center gap-2 backdrop-blur-md shadow-xl"
+        >
+          <ArrowLeft className="w-4 h-4 text-blue-400" />
+          <span>Home Landing Page</span>
+        </button>
+        <MobileTrackerMode isStandaloneMobileView onRefresh={() => {}} />
       </div>
     );
   }
@@ -291,8 +314,7 @@ const AppContent: React.FC = () => {
           setViewState('APP');
         }}
         onOpenMobileTracker={() => {
-          setTargetTab('simulator');
-          setViewState('APP');
+          setViewState('TRACKER');
         }}
       />
     );
