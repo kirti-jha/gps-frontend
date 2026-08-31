@@ -102,6 +102,7 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ initialTab = 'live', onRe
               lastLongitude: data.longitude,
               lastSpeed: data.speed,
               lastHeading: data.heading,
+              lastAccuracy: data.accuracy,
               batteryLevel: data.battery,
               lastSeen: data.lastSeen,
               trackingStatus: 'ONLINE'

@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Search, Gauge, Battery, RefreshCw, ChevronUp, ChevronDown, List } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, Gauge, Battery, RefreshCw, ChevronDown, List, Navigation, MapPin } from 'lucide-react';
 import { LiveMap } from '../components/LiveMap';
 import { Tracker, Geofence } from '../types';
 
@@ -9,6 +9,22 @@ interface LiveFleetViewProps {
   setSelectedTrackerId: (id: string | null) => void;
   geofences: Geofence[];
   onRefresh: () => void;
+}
+
+// Haversine distance in km between two lat/lng points
+function distanceKm(lat1: number, lng1: number, lat2: number, lng2: number): number {
+  const R = 6371;
+  const dLat = ((lat2 - lat1) * Math.PI) / 180;
+  const dLng = ((lng2 - lng1) * Math.PI) / 180;
+  const a =
+    Math.sin(dLat / 2) ** 2 +
+    Math.cos((lat1 * Math.PI) / 180) * Math.cos((lat2 * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+}
+
+function formatDistance(km: number): string {
+  if (km < 1) return `${Math.round(km * 1000)} m away`;
+  return `${km.toFixed(1)} km away`;
 }
 
 export const LiveFleetView: React.FC<LiveFleetViewProps> = ({
@@ -21,6 +37,19 @@ export const LiveFleetView: React.FC<LiveFleetViewProps> = ({
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ONLINE' | 'IDLE' | 'OFFLINE'>('ALL');
   const [isAssetListOpenMobile, setIsAssetListOpenMobile] = useState(false);
+  // Viewer's own location (dashboard user's device location)
+  const [viewerLocation, setViewerLocation] = useState<{ lat: number; lng: number } | null>(null);
+
+  // Get dashboard user's location once (for distance calculations)
+  useEffect(() => {
+    if ('geolocation' in navigator) {
+      navigator.geolocation.getCurrentPosition(
+        pos => setViewerLocation({ lat: pos.coords.latitude, lng: pos.coords.longitude }),
+        () => {}, // Silent fail — distance feature just won't show
+        { enableHighAccuracy: false, timeout: 10000, maximumAge: 60000 }
+      );
+    }
+  }, []);
 
   const filteredTrackers = trackers.filter(t => {
     const matchesSearch = t.deviceName.toLowerCase().includes(searchQuery.toLowerCase()) ||
@@ -30,6 +59,17 @@ export const LiveFleetView: React.FC<LiveFleetViewProps> = ({
   });
 
   const selectedTracker = trackers.find(t => t.id === selectedTrackerId);
+
+  const getBatteryColor = (level: number) => {
+    if (level <= 10) return 'text-rose-500';
+    if (level <= 30) return 'text-amber-400';
+    return 'text-emerald-400';
+  };
+
+  const getBatteryDisplay = (level: number) => {
+    const clamped = Math.min(100, Math.max(0, Math.round(level)));
+    return `${clamped}%`;
+  };
 
   return (
     <div className="w-full h-full flex flex-col md:flex-row relative overflow-hidden bg-dark-900">
@@ -87,6 +127,14 @@ export const LiveFleetView: React.FC<LiveFleetViewProps> = ({
               </button>
             ))}
           </div>
+
+          {/* Viewer location indicator */}
+          {viewerLocation && (
+            <div className="flex items-center gap-1.5 text-[10px] text-slate-500">
+              <Navigation className="w-3 h-3 text-blue-400" />
+              <span>Your location detected — showing distances</span>
+            </div>
+          )}
         </div>
 
         {/* Tracker List */}
@@ -99,6 +147,15 @@ export const LiveFleetView: React.FC<LiveFleetViewProps> = ({
                 : tracker.trackingStatus === 'IDLE'
                 ? 'bg-amber-500'
                 : 'bg-slate-500';
+
+            // Distance from dashboard viewer to tracker
+            const dist = viewerLocation && tracker.lastLatitude
+              ? distanceKm(viewerLocation.lat, viewerLocation.lng, tracker.lastLatitude, tracker.lastLongitude)
+              : null;
+
+            // Clamp battery to valid range (backend may send raw sensor data)
+            const batteryDisplay = getBatteryDisplay(tracker.batteryLevel);
+            const batteryColor = getBatteryColor(tracker.batteryLevel);
 
             return (
               <div
@@ -129,10 +186,19 @@ export const LiveFleetView: React.FC<LiveFleetViewProps> = ({
                     <span>{Math.round(tracker.lastSpeed)} km/h</span>
                   </div>
                   <div className="flex items-center gap-1.5">
-                    <Battery className={`w-3.5 h-3.5 ${tracker.batteryLevel < 20 ? 'text-rose-500' : 'text-emerald-400'}`} />
-                    <span>{tracker.batteryLevel}%</span>
+                    <Battery className={`w-3.5 h-3.5 ${batteryColor}`} />
+                    <span className={batteryColor}>{batteryDisplay}</span>
                   </div>
                 </div>
+
+                {/* Distance from viewer */}
+                {dist !== null && (
+                  <div className="flex items-center gap-1.5 mt-1.5 text-[10px] text-slate-500">
+                    <MapPin className="w-3 h-3 text-cyan-500" />
+                    <span className="text-cyan-400 font-semibold">{formatDistance(dist)}</span>
+                    <span className="text-slate-600">from you</span>
+                  </div>
+                )}
               </div>
             );
           })}
@@ -181,15 +247,26 @@ export const LiveFleetView: React.FC<LiveFleetViewProps> = ({
               </div>
               <div className="bg-dark-900/80 p-1.5 sm:p-2 rounded-xl border border-dark-700">
                 <div className="text-[9px] sm:text-[10px] text-slate-400">BATTERY</div>
-                <div className={`font-extrabold text-xs sm:text-sm ${selectedTracker.batteryLevel < 20 ? 'text-rose-400' : 'text-emerald-400'}`}>
-                  {selectedTracker.batteryLevel}%
+                <div className={`font-extrabold text-xs sm:text-sm ${getBatteryColor(selectedTracker.batteryLevel)}`}>
+                  {getBatteryDisplay(selectedTracker.batteryLevel)}
                 </div>
               </div>
               <div className="bg-dark-900/80 p-1.5 sm:p-2 rounded-xl border border-dark-700">
-                <div className="text-[9px] sm:text-[10px] text-slate-400">ACCURACY</div>
+                <div className="text-[9px] sm:text-[10px] text-slate-400">GPS ±</div>
                 <div className="font-extrabold text-xs sm:text-sm text-cyan-400">±{selectedTracker.lastAccuracy}m</div>
               </div>
             </div>
+
+            {/* Distance from viewer to selected tracker */}
+            {viewerLocation && selectedTracker.lastLatitude && (
+              <div className="flex items-center justify-center gap-2 bg-cyan-500/10 border border-cyan-500/20 rounded-xl py-1.5 text-xs">
+                <MapPin className="w-3.5 h-3.5 text-cyan-400" />
+                <span className="font-bold text-cyan-300">
+                  {formatDistance(distanceKm(viewerLocation.lat, viewerLocation.lng, selectedTracker.lastLatitude, selectedTracker.lastLongitude))}
+                </span>
+                <span className="text-slate-400">from your location</span>
+              </div>
+            )}
           </div>
         )}
       </div>
