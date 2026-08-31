@@ -3,10 +3,6 @@
     {
       "source": "/api/:path*",
       "destination": "https://gps-backend-eta.vercel.app/api/:path*"
-    },
-    {
-      "source": "/((?!assets/|sw.js|manifest.json|pwa-.*|favicon.ico|.*\\..*).*)",
-      "destination": "/index.html"
     }
   ]
 }
