@@ -22,6 +22,7 @@ interface MainDashboardProps {
 
 const MainDashboard: React.FC<MainDashboardProps> = ({ initialTab = 'live', onReturnToLanding }) => {
   const [activeTab, setActiveTab] = useState(initialTab);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [trackers, setTrackers] = useState<Tracker[]>([]);
   const [geofences, setGeofences] = useState<Geofence[]>([]);
   const [alerts, setAlerts] = useState<Alert[]>([]);
@@ -120,14 +121,19 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ initialTab = 'live', onRe
         setActiveTab={setActiveTab}
         unreadAlertsCount={unreadAlertsCount}
         isSocketConnected={isSocketConnected}
+        isMobileMenuOpen={isMobileMenuOpen}
+        setIsMobileMenuOpen={setIsMobileMenuOpen}
+        onReturnToLanding={onReturnToLanding}
       />
-      <div className="flex-1 flex overflow-hidden">
+      <div className="flex-1 flex overflow-hidden relative">
         <Sidebar
           activeTab={activeTab}
           setActiveTab={setActiveTab}
           unreadAlertsCount={unreadAlertsCount}
+          isMobileMenuOpen={isMobileMenuOpen}
+          setIsMobileMenuOpen={setIsMobileMenuOpen}
         />
-        <main className="flex-1 h-full overflow-hidden bg-dark-900 relative">
+        <main className="flex-1 h-full overflow-hidden bg-dark-900 relative pb-14 md:pb-0">
           {/* Quick back to Landing Page button floating */}
           <button
             onClick={onReturnToLanding}
