@@ -5,7 +5,7 @@
       "destination": "https://gps-backend-eta.vercel.app/api/:path*"
     },
     {
-      "source": "/(.*)",
+      "source": "/((?!assets/|sw.js|manifest.json|pwa-.*|favicon.ico|.*\\..*).*)",
       "destination": "/index.html"
     }
   ]
