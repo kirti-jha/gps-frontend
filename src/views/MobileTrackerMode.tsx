@@ -37,14 +37,17 @@ export const MobileTrackerMode: React.FC<MobileTrackerModeProps> = ({
   const [isOfflineSimulated, setIsOfflineSimulated] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<any>(null);
 
-  // GPS accuracy threshold — only transmit fixes better than this (meters)
+  // GPS accuracy threshold for satellite mode (meters)
   const GPS_ACCURACY_THRESHOLD = 40;
+  // Threshold for network/cell-tower fallback (meters)
+  const NETWORK_ACCURACY_THRESHOLD = 500;
 
   // Telemetry state
   const [battery, setBattery] = useState(90);
   const [speed, setSpeed] = useState(0);
   const [heading, setHeading] = useState(0);
   const [accuracy, setAccuracy] = useState(0);
+  const [locationSource, setLocationSource] = useState<'GPS' | 'NETWORK' | 'NONE'>('NONE');
   const [lastCoords, setLastCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [sentCount, setSentCount] = useState(0);
   const [lastSentTime, setLastSentTime] = useState<string | null>(null);
@@ -56,6 +59,7 @@ export const MobileTrackerMode: React.FC<MobileTrackerModeProps> = ({
   // Simulation timer & GPS watch refs
   const simTimerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const watchIdRef = useRef<number | null>(null);
+  const networkWatchIdRef = useRef<number | null>(null);
   const wakeLockRef = useRef<any>(null);
 
   // Listen for PWA installation prompt
@@ -116,7 +120,7 @@ export const MobileTrackerMode: React.FC<MobileTrackerModeProps> = ({
 
     if (isOfflineSimulated || !navigator.onLine) {
       offlineQueueRef.current.push(payload);
-      setStatusMessage(`Network Offline. Buffered #${offlineQueueRef.current.length}`);
+      setStatusMessage(`📡 GPS active — buffering offline (${offlineQueueRef.current.length} points queued)`);
       return;
     }
 
@@ -168,63 +172,127 @@ export const MobileTrackerMode: React.FC<MobileTrackerModeProps> = ({
     }
   }, [isOfflineSimulated]);
 
+  // Auto-flush buffered points when internet connection is restored
+  useEffect(() => {
+    const handleOnline = () => {
+      setStatusMessage('Connection restored — syncing buffered GPS points...');
+      flushOfflineQueue();
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, []);
+
   // Start / Stop Tracking Logic
+  const stopAllWatchers = () => {
+    if (simTimerRef.current) clearInterval(simTimerRef.current);
+    if (watchIdRef.current !== null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(watchIdRef.current);
+      watchIdRef.current = null;
+    }
+    if (networkWatchIdRef.current !== null && navigator.geolocation) {
+      navigator.geolocation.clearWatch(networkWatchIdRef.current);
+      networkWatchIdRef.current = null;
+    }
+  };
+
   const toggleTracking = () => {
     if (isTracking) {
       setIsTracking(false);
+      setLocationSource('NONE');
       releaseWakeLock();
-      if (simTimerRef.current) clearInterval(simTimerRef.current);
-      if (watchIdRef.current !== null && navigator.geolocation) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-      }
+      stopAllWatchers();
       setStatusMessage('Tracking Paused');
     } else {
       setIsTracking(true);
       requestWakeLock();
 
       if (trackingMode === 'REAL_GPS') {
-        if ('geolocation' in navigator) {
-          setStatusMessage('Acquiring Satellite GPS Fix...');
-          watchIdRef.current = navigator.geolocation.watchPosition(
-            pos => {
-              const { latitude, longitude, speed: spd, heading: hdg, accuracy: acc } = pos.coords;
-              const currentSpeed = spd ? Math.round(spd * 3.6) : 0;
-              const currentHeading = hdg || 0;
-              const currentAccuracy = Math.round(acc);
-
-              setAccuracy(currentAccuracy);
-
-              // Client-side accuracy filter: skip coarse WiFi/IP fixes
-              // Only transmit when we have a true satellite GPS lock
-              if (currentAccuracy > GPS_ACCURACY_THRESHOLD) {
-                setStatusMessage(`Waiting for GPS satellite fix... (currently ±${currentAccuracy}m, need ≤${GPS_ACCURACY_THRESHOLD}m)`);
-                return;
-              }
-
-              setSpeed(currentSpeed);
-              setHeading(currentHeading);
-              sendLocationPoint(latitude, longitude, currentSpeed, currentHeading, currentAccuracy, battery);
-            },
-            err => {
-              console.error('GPS Fix Error:', err);
-              if (err.code === 1) {
-                setStatusMessage('Location permission denied. Please allow in browser settings.');
-              } else if (err.code === 2) {
-                setStatusMessage('GPS signal unavailable. Move to open area.');
-              } else {
-                setStatusMessage(`GPS Error: ${err.message}`);
-              }
-              setIsTracking(false);
-            },
-            {
-              enableHighAccuracy: true,
-              maximumAge: 0,       // Always request fresh fix
-              timeout: 30000       // iOS needs up to 30s for true satellite lock
-            }
-          );
-        } else {
+        if (!('geolocation' in navigator)) {
           alert('HTML5 Geolocation is not supported on this browser.');
+          setIsTracking(false);
+          return;
         }
+
+        setStatusMessage('Acquiring GPS fix...');
+
+        // === SATELLITE GPS (high accuracy) ===
+        // GPS works WITHOUT internet — satellite signals are always available
+        watchIdRef.current = navigator.geolocation.watchPosition(
+          pos => {
+            const { latitude, longitude, speed: spd, heading: hdg, accuracy: acc } = pos.coords;
+            const currentSpeed = spd ? Math.round(spd * 3.6) : 0;
+            const currentHeading = hdg || 0;
+            const currentAccuracy = Math.round(acc);
+
+            setAccuracy(currentAccuracy);
+
+            if (currentAccuracy > GPS_ACCURACY_THRESHOLD) {
+              setStatusMessage(`Satellite acquiring... ±${currentAccuracy}m (need ≤${GPS_ACCURACY_THRESHOLD}m)`);
+              return;
+            }
+
+            // Got satellite GPS lock — stop the network fallback watcher
+            if (networkWatchIdRef.current !== null) {
+              navigator.geolocation.clearWatch(networkWatchIdRef.current);
+              networkWatchIdRef.current = null;
+            }
+
+            setLocationSource('GPS');
+            setSpeed(currentSpeed);
+            setHeading(currentHeading);
+            sendLocationPoint(latitude, longitude, currentSpeed, currentHeading, currentAccuracy, battery);
+          },
+          err => {
+            // Satellite failed — stay on network fallback, don't stop tracking
+            console.warn('Satellite GPS error:', err.message);
+          },
+          {
+            enableHighAccuracy: true,
+            maximumAge: 0,
+            timeout: 30000
+          }
+        );
+
+        // === NETWORK / CELL-TOWER FALLBACK ===
+        // Works like "Where is My Train" — uses mobile network/WiFi triangulation
+        // This kicks in when satellite GPS is not available (indoors, no sky view)
+        // Location is less precise (±100-500m) but still usable
+        networkWatchIdRef.current = navigator.geolocation.watchPosition(
+          pos => {
+            // Only use this if satellite GPS hasn't locked yet
+            if (locationSource === 'GPS') return;
+
+            const { latitude, longitude, speed: spd, heading: hdg, accuracy: acc } = pos.coords;
+            const currentSpeed = spd ? Math.round(spd * 3.6) : 0;
+            const currentHeading = hdg || 0;
+            const currentAccuracy = Math.round(acc);
+
+            setAccuracy(currentAccuracy);
+
+            if (currentAccuracy > NETWORK_ACCURACY_THRESHOLD) {
+              setStatusMessage(`Cell tower fix: ±${currentAccuracy}m — waiting for better signal`);
+              return;
+            }
+
+            setLocationSource('NETWORK');
+            setSpeed(currentSpeed);
+            setHeading(currentHeading);
+            setStatusMessage(`📶 Network location ±${currentAccuracy}m (satellite searching...)`);
+            sendLocationPoint(latitude, longitude, currentSpeed, currentHeading, currentAccuracy, battery);
+          },
+          err => {
+            if (err.code === 1) {
+              setStatusMessage('Location permission denied. Please allow in browser settings.');
+              setIsTracking(false);
+              stopAllWatchers();
+            }
+          },
+          {
+            enableHighAccuracy: false, // Uses WiFi + cell towers — works even with mobile data off
+            maximumAge: 10000,
+            timeout: 15000
+          }
+        );
       } else {
         // Simulated Route Driving
         let step = 0;
@@ -249,10 +317,7 @@ export const MobileTrackerMode: React.FC<MobileTrackerModeProps> = ({
   useEffect(() => {
     return () => {
       releaseWakeLock();
-      if (simTimerRef.current) clearInterval(simTimerRef.current);
-      if (watchIdRef.current !== null && navigator.geolocation) {
-        navigator.geolocation.clearWatch(watchIdRef.current);
-      }
+      stopAllWatchers();
     };
   }, []);
 
@@ -373,25 +438,25 @@ export const MobileTrackerMode: React.FC<MobileTrackerModeProps> = ({
             </div>
           </div>
 
-          {/* GPS Quality Indicator */}
+          {/* GPS / Network Quality Indicator */}
           {isTracking && trackingMode === 'REAL_GPS' && (
             <div className="flex items-center justify-center gap-1.5">
               <div className={`w-2 h-2 rounded-full ${
-                accuracy === 0 ? 'bg-slate-500' :
-                accuracy <= 10 ? 'bg-emerald-400 animate-pulse' :
-                accuracy <= 40 ? 'bg-amber-400 animate-pulse' :
-                'bg-rose-400 animate-ping'
+                locationSource === 'NONE' ? 'bg-slate-500 animate-pulse' :
+                locationSource === 'GPS' && accuracy <= 10 ? 'bg-emerald-400 animate-pulse' :
+                locationSource === 'GPS' ? 'bg-amber-400 animate-pulse' :
+                'bg-blue-400 animate-pulse'
               }`} />
               <span className={`text-[10px] font-bold ${
-                accuracy === 0 ? 'text-slate-400' :
-                accuracy <= 10 ? 'text-emerald-400' :
-                accuracy <= 40 ? 'text-amber-400' :
-                'text-rose-400'
+                locationSource === 'NONE' ? 'text-slate-400' :
+                locationSource === 'GPS' && accuracy <= 10 ? 'text-emerald-400' :
+                locationSource === 'GPS' ? 'text-amber-400' :
+                'text-blue-400'
               }`}>
-                {accuracy === 0 ? 'Searching...' :
-                 accuracy <= 10 ? `✓ GPS Satellite Lock (±${accuracy}m)` :
-                 accuracy <= 40 ? `⚡ GPS Acquiring (±${accuracy}m)` :
-                 `⏳ Coarse fix — waiting for GPS (±${accuracy}m)`}
+                {locationSource === 'NONE' ? '🔍 Searching for GPS satellite...' :
+                 locationSource === 'GPS' && accuracy <= 10 ? `✓ GPS Satellite Lock (±${accuracy}m)` :
+                 locationSource === 'GPS' ? `⚡ Satellite GPS (±${accuracy}m)` :
+                 `📶 Cell Tower / Network (±${accuracy}m)`}
               </span>
             </div>
           )}

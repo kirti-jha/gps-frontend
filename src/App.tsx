@@ -35,6 +35,14 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ initialTab = 'live', onRe
     }
   }, [initialTab]);
 
+  // Helper: compute tracker status from lastSeen timestamp (mirrors backend logic)
+  const computeTrackerStatus = (lastSeen: string): 'ONLINE' | 'IDLE' | 'OFFLINE' => {
+    const diffSec = (Date.now() - new Date(lastSeen).getTime()) / 1000;
+    if (diffSec < 30) return 'ONLINE';
+    if (diffSec <= 120) return 'IDLE';
+    return 'OFFLINE';
+  };
+
   // Fetch initial fleet data
   const loadFleetData = async () => {
     try {
@@ -123,6 +131,27 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ initialTab = 'live', onRe
       socket.off('tracker:status');
       socket.off('alert:created');
     };
+  }, []);
+
+  // Client-side status recomputation every 15s
+  // Fixes: Vercel serverless can't run background setInterval, so status
+  // never updates via WebSocket. We compute it locally from lastSeen.
+  useEffect(() => {
+    const statusTimer = setInterval(() => {
+      setTrackers(prev => prev.map(t => ({
+        ...t,
+        trackingStatus: computeTrackerStatus(t.lastSeen)
+      })));
+    }, 15000);
+    return () => clearInterval(statusTimer);
+  }, []);
+
+  // Periodic full data refresh every 30s as safety net for missed WebSocket events on Vercel
+  useEffect(() => {
+    const refreshTimer = setInterval(() => {
+      loadFleetData();
+    }, 30000);
+    return () => clearInterval(refreshTimer);
   }, []);
 
   const unreadAlertsCount = alerts.filter(a => !a.isRead).length;
