@@ -1,6 +1,12 @@
 import { io, Socket } from 'socket.io-client';
 
-const API_BASE = '/api/v1';
+export const BACKEND_URL =
+  (import.meta as any).env?.VITE_BACKEND_URL ||
+  (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:5000'
+    : 'https://gps-backend-eta.vercel.app');
+
+export const API_BASE = `${BACKEND_URL}/api/v1`;
 
 export async function apiRequest<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = localStorage.getItem('trackx_token');
@@ -13,7 +19,9 @@ export async function apiRequest<T>(endpoint: string, options: RequestInit = {})
     headers['Authorization'] = `Bearer ${token}`;
   }
 
-  const res = await fetch(`${API_BASE}${endpoint}`, {
+  const url = endpoint.startsWith('http') ? endpoint : `${API_BASE}${endpoint}`;
+
+  const res = await fetch(url, {
     ...options,
     headers
   });
@@ -30,9 +38,10 @@ let socketInstance: Socket | null = null;
 
 export function getSocket(): Socket {
   if (!socketInstance) {
-    socketInstance = io(window.location.origin, {
+    socketInstance = io(BACKEND_URL, {
       reconnectionAttempts: 5,
-      timeout: 10000
+      timeout: 10000,
+      transports: ['websocket', 'polling']
     });
   }
   return socketInstance;
