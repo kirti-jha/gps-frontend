@@ -37,11 +37,14 @@ export const MobileTrackerMode: React.FC<MobileTrackerModeProps> = ({
   const [isOfflineSimulated, setIsOfflineSimulated] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<any>(null);
 
+  // GPS accuracy threshold — only transmit fixes better than this (meters)
+  const GPS_ACCURACY_THRESHOLD = 40;
+
   // Telemetry state
   const [battery, setBattery] = useState(90);
   const [speed, setSpeed] = useState(0);
   const [heading, setHeading] = useState(0);
-  const [accuracy, setAccuracy] = useState(8);
+  const [accuracy, setAccuracy] = useState(0);
   const [lastCoords, setLastCoords] = useState<{ lat: number; lng: number } | null>(null);
   const [sentCount, setSentCount] = useState(0);
   const [lastSentTime, setLastSentTime] = useState<string | null>(null);
@@ -187,18 +190,37 @@ export const MobileTrackerMode: React.FC<MobileTrackerModeProps> = ({
               const { latitude, longitude, speed: spd, heading: hdg, accuracy: acc } = pos.coords;
               const currentSpeed = spd ? Math.round(spd * 3.6) : 0;
               const currentHeading = hdg || 0;
-              const currentAccuracy = Math.round(acc || 8);
+              const currentAccuracy = Math.round(acc);
+
+              setAccuracy(currentAccuracy);
+
+              // Client-side accuracy filter: skip coarse WiFi/IP fixes
+              // Only transmit when we have a true satellite GPS lock
+              if (currentAccuracy > GPS_ACCURACY_THRESHOLD) {
+                setStatusMessage(`Waiting for GPS satellite fix... (currently ±${currentAccuracy}m, need ≤${GPS_ACCURACY_THRESHOLD}m)`);
+                return;
+              }
 
               setSpeed(currentSpeed);
               setHeading(currentHeading);
-              setAccuracy(currentAccuracy);
               sendLocationPoint(latitude, longitude, currentSpeed, currentHeading, currentAccuracy, battery);
             },
             err => {
               console.error('GPS Fix Error:', err);
-              setStatusMessage(`GPS Error: ${err.message}`);
+              if (err.code === 1) {
+                setStatusMessage('Location permission denied. Please allow in browser settings.');
+              } else if (err.code === 2) {
+                setStatusMessage('GPS signal unavailable. Move to open area.');
+              } else {
+                setStatusMessage(`GPS Error: ${err.message}`);
+              }
+              setIsTracking(false);
             },
-            { enableHighAccuracy: true, maximumAge: 0, timeout: 10000 }
+            {
+              enableHighAccuracy: true,
+              maximumAge: 0,       // Always request fresh fix
+              timeout: 30000       // iOS needs up to 30s for true satellite lock
+            }
           );
         } else {
           alert('HTML5 Geolocation is not supported on this browser.');
@@ -350,6 +372,29 @@ export const MobileTrackerMode: React.FC<MobileTrackerModeProps> = ({
               Sent: <strong className="text-blue-400">{sentCount}</strong> | Buffer: <strong className="text-amber-400">{offlineQueueRef.current.length}</strong> | Last: {lastSentTime || '--'}
             </div>
           </div>
+
+          {/* GPS Quality Indicator */}
+          {isTracking && trackingMode === 'REAL_GPS' && (
+            <div className="flex items-center justify-center gap-1.5">
+              <div className={`w-2 h-2 rounded-full ${
+                accuracy === 0 ? 'bg-slate-500' :
+                accuracy <= 10 ? 'bg-emerald-400 animate-pulse' :
+                accuracy <= 40 ? 'bg-amber-400 animate-pulse' :
+                'bg-rose-400 animate-ping'
+              }`} />
+              <span className={`text-[10px] font-bold ${
+                accuracy === 0 ? 'text-slate-400' :
+                accuracy <= 10 ? 'text-emerald-400' :
+                accuracy <= 40 ? 'text-amber-400' :
+                'text-rose-400'
+              }`}>
+                {accuracy === 0 ? 'Searching...' :
+                 accuracy <= 10 ? `✓ GPS Satellite Lock (±${accuracy}m)` :
+                 accuracy <= 40 ? `⚡ GPS Acquiring (±${accuracy}m)` :
+                 `⏳ Coarse fix — waiting for GPS (±${accuracy}m)`}
+              </span>
+            </div>
+          )}
 
           <div className="text-[11px] font-semibold text-emerald-400 flex items-center justify-center gap-1.5 pt-1">
             <Radio className={`w-3.5 h-3.5 ${isTracking ? 'animate-pulse text-emerald-400' : 'text-slate-500'}`} />
