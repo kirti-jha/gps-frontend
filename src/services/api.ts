@@ -1,4 +1,5 @@
 import { io, Socket } from 'socket.io-client';
+import { RouteGeoJSON } from '../types';
 
 export const BACKEND_URL =
   (import.meta as any).env?.VITE_BACKEND_URL ||
@@ -45,4 +46,37 @@ export function getSocket(): Socket {
     });
   }
   return socketInstance;
+}
+
+/**
+ * Fetch the shortest route from the backend (OSRM-backed).
+ * Returns Leaflet-compatible [lat, lng][] coordinate pairs.
+ * Supports both trackerId-based and explicit point-to-point queries.
+ */
+export async function fetchShortestRoute(params: {
+  trackerId?: string;
+  fromLat?: number;
+  fromLng?: number;
+  toLat?: number;
+  toLng?: number;
+}): Promise<[number, number][]> {
+  const query = new URLSearchParams();
+  if (params.trackerId) query.set('trackerId', params.trackerId);
+  if (params.fromLat !== undefined) query.set('fromLat', String(params.fromLat));
+  if (params.fromLng !== undefined) query.set('fromLng', String(params.fromLng));
+  if (params.toLat !== undefined) query.set('toLat', String(params.toLat));
+  if (params.toLng !== undefined) query.set('toLng', String(params.toLng));
+
+  const geoJson = await apiRequest<RouteGeoJSON>(`/route?${query.toString()}`);
+
+  // Normalize: extract coordinates from LineString or FeatureCollection
+  let coords: [number, number][] = [];
+  if (geoJson.type === 'LineString' && geoJson.coordinates) {
+    coords = geoJson.coordinates;
+  } else if (geoJson.type === 'FeatureCollection' && geoJson.features?.length) {
+    coords = geoJson.features[0].geometry.coordinates;
+  }
+
+  // GeoJSON uses [lng, lat] — flip to [lat, lng] for Leaflet
+  return coords.map(([lng, lat]) => [lat, lng]);
 }

@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { MapContainer, TileLayer, Marker, Popup, Circle, Polygon, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Popup, Circle, Polygon, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Tracker, Geofence } from '../types';
 
@@ -48,18 +48,40 @@ function createTrackerIcon(tracker: Tracker, isSelected: boolean) {
   });
 }
 
+// Route endpoint pin icon
+function createRouteEndpointIcon(type: 'start' | 'end') {
+  const isStart = type === 'start';
+  const bg = isStart ? '#10B981' : '#EF4444';
+  const label = isStart ? 'A' : 'B';
+  const html = `
+    <div style="
+      width: 28px; height: 28px; border-radius: 50% 50% 50% 0;
+      background: ${bg}; border: 2px solid white;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.5);
+      display: flex; align-items: center; justify-content: center;
+      transform: rotate(-45deg);
+    ">
+      <span style="transform: rotate(45deg); font-weight: 800; font-size: 11px; color: white;">${label}</span>
+    </div>
+  `;
+  return L.divIcon({ html, className: 'route-pin-icon', iconSize: [28, 28], iconAnchor: [14, 28] });
+}
+
 interface LiveMapProps {
   trackers: Tracker[];
   selectedTrackerId: string | null;
   onSelectTracker: (id: string) => void;
   geofences: Geofence[];
+  /** Shortest route coords in [lat, lng][] (Leaflet format) */
+  routeCoords?: [number, number][];
 }
 
 export const LiveMap: React.FC<LiveMapProps> = ({
   trackers,
   selectedTrackerId,
   onSelectTracker,
-  geofences
+  geofences,
+  routeCoords
 }) => {
   const selectedTracker = trackers.find(t => t.id === selectedTrackerId);
 
@@ -135,6 +157,45 @@ export const LiveMap: React.FC<LiveMapProps> = ({
               weight: 1
             }}
           />
+        )}
+
+        {/* ── Shortest Route Polyline ── */}
+        {routeCoords && routeCoords.length > 1 && (
+          <>
+            {/* Outer glow / shadow line */}
+            <Polyline
+              positions={routeCoords}
+              pathOptions={{
+                color: '#6366F1',
+                weight: 8,
+                opacity: 0.25,
+                lineCap: 'round',
+                lineJoin: 'round'
+              }}
+            />
+            {/* Main route line */}
+            <Polyline
+              positions={routeCoords}
+              pathOptions={{
+                color: '#818CF8',
+                weight: 4,
+                opacity: 0.9,
+                dashArray: '10, 6',
+                lineCap: 'round',
+                lineJoin: 'round'
+              }}
+            />
+            {/* Start marker */}
+            <Marker
+              position={routeCoords[0]}
+              icon={createRouteEndpointIcon('start')}
+            />
+            {/* End marker */}
+            <Marker
+              position={routeCoords[routeCoords.length - 1]}
+              icon={createRouteEndpointIcon('end')}
+            />
+          </>
         )}
 
         {/* Render Trackers */}

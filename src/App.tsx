@@ -105,7 +105,11 @@ const MainDashboard: React.FC<MainDashboardProps> = ({ initialTab = 'live', onRe
               lastAccuracy: data.accuracy,
               batteryLevel: data.battery,
               lastSeen: data.lastSeen,
-              trackingStatus: 'ONLINE'
+              trackingStatus: 'ONLINE',
+              // Real-time proximity data sent by backend (distances to nearby trackers)
+              ...(data.proximitySnapshot !== undefined && {
+                proximitySnapshot: data.proximitySnapshot
+              })
             };
           }
           return t;

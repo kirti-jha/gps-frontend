@@ -1,5 +1,23 @@
 export type TrackingStatus = 'ONLINE' | 'IDLE' | 'OFFLINE';
 
+export interface ProximitySnapshot {
+  trackerId: string;
+  deviceName: string;
+  trackerCode: string;
+  distanceKm: number;
+  trackingStatus?: TrackingStatus;
+}
+
+// GeoJSON LineString returned by GET /api/v1/route
+export interface RouteGeoJSON {
+  type: 'LineString' | 'FeatureCollection';
+  coordinates?: [number, number][]; // [lng, lat] pairs (GeoJSON spec)
+  features?: Array<{
+    type: 'Feature';
+    geometry: { type: 'LineString'; coordinates: [number, number][] };
+  }>;
+}
+
 export interface Tracker {
   id: string;
   trackerCode: string;
@@ -15,6 +33,7 @@ export interface Tracker {
   lastAccuracy: number;
   lastSeen: string;
   createdAt: string;
+  proximitySnapshot?: ProximitySnapshot[];
 }
 
 export interface LocationPoint {
