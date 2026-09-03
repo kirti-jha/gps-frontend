@@ -62,8 +62,9 @@ export async function fetchShortestRoute(params: {
 }): Promise<[number, number][]> {
   const query = new URLSearchParams();
   if (params.trackerId) query.set('trackerId', params.trackerId);
-  if (params.fromLat !== undefined) query.set('fromLat', String(params.fromLat));
-  if (params.fromLng !== undefined) query.set('fromLng', String(params.fromLng));
+  // Pass as userLat/userLng so backend treats it as the user's origin point
+  if (params.fromLat !== undefined) query.set('userLat', String(params.fromLat));
+  if (params.fromLng !== undefined) query.set('userLng', String(params.fromLng));
   if (params.toLat !== undefined) query.set('toLat', String(params.toLat));
   if (params.toLng !== undefined) query.set('toLng', String(params.toLng));
 

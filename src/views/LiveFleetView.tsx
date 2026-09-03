@@ -95,7 +95,12 @@ export const LiveFleetView: React.FC<LiveFleetViewProps> = ({
     setRouteLoading(true);
     setRouteError(null);
     try {
-      const coords = await fetchShortestRoute({ trackerId: selectedTrackerId });
+      const params: { trackerId: string; fromLat?: number; fromLng?: number } = { trackerId: selectedTrackerId };
+      if (viewerLocation) {
+        params.fromLat = viewerLocation.lat;
+        params.fromLng = viewerLocation.lng;
+      }
+      const coords = await fetchShortestRoute(params);
       setRouteCoords(coords);
     } catch (err: any) {
       setRouteError(err?.message || 'Could not fetch route');
@@ -103,7 +108,7 @@ export const LiveFleetView: React.FC<LiveFleetViewProps> = ({
     } finally {
       setRouteLoading(false);
     }
-  }, [selectedTrackerId]);
+  }, [selectedTrackerId, viewerLocation]);
 
   const handleClearRoute = () => {
     setRouteCoords(undefined);
