@@ -1,3 +1,6 @@
+import { ShareLiveLocationModal } from '../components/ShareLiveLocationModal';
+import { DriverSafetyScore } from '../components/DriverSafetyScore';
+import { Share2 } from 'lucide-react';
 import { WaysToReachModal } from '../components/WaysToReachModal';
 import { RouteOption } from '../utils/waysToReach';
 import React, { useState, useEffect, useCallback } from 'react';
@@ -75,6 +78,7 @@ export const LiveFleetView: React.FC<LiveFleetViewProps> = ({
   // Proximity panel collapse
   const [proximityExpanded, setProximityExpanded] = useState(true);
   const [isWaysToReachOpen, setIsWaysToReachOpen] = useState(false);
+  const [isShareModalOpen, setIsShareModalOpen] = useState(false);
   const [showMetroStations, setShowMetroStations] = useState(true);
 
 

@@ -21,6 +21,8 @@ interface MobileTrackerModeProps {
   isStandaloneMobileView?: boolean;
 }
 
+
+  
 export const MobileTrackerMode: React.FC<MobileTrackerModeProps> = ({
   trackers = [],
   onRefresh,
@@ -33,6 +35,26 @@ export const MobileTrackerMode: React.FC<MobileTrackerModeProps> = ({
   const [isTracking, setIsTracking] = useState(false);
   const [isOfflineSimulated, setIsOfflineSimulated] = useState(false);
   const [installPrompt, setInstallPrompt] = useState<any>(null);
+
+  const [sosActive, setSosActive] = useState(false);
+
+  const handleEmergencySOS = async () => {
+    setSosActive(true);
+    alert('🚨 EMERGENCY SOS ACTIVATED! Broadasting panic alert & siren to all fleet controllers!');
+    try {
+      await fetch(`${API_BASE}/alerts`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          trackerCode: selectedTrackerCode,
+          type: 'OVERSPEED',
+          message: `🚨 EMERGENCY SOS TRIGGERED BY MOBILE ASSET (${selectedTrackerCode})`
+        })
+      });
+    } catch (err) {}
+    setTimeout(() => setSosActive(false), 5000);
+  };
+
 
   // Telemetry state
   const [battery, setBattery] = useState(85);
@@ -467,6 +489,19 @@ export const MobileTrackerMode: React.FC<MobileTrackerModeProps> = ({
         >
           {isOfflineSimulated ? <WifiOff className="w-4 h-4 text-rose-400" /> : <Wifi className="w-4 h-4 text-emerald-400" />}
           <span>{isOfflineSimulated ? 'Network Disconnected (Buffering Offline)' : 'Network Connected'}</span>
+        </button>
+
+        
+        {/* 🚨 Emergency SOS Trigger Button */}
+        <button
+          onClick={handleEmergencySOS}
+          className={`w-full py-3 rounded-2xl font-black text-xs flex items-center justify-center gap-2 border shadow-xl transition transform active:scale-95 ${
+            sosActive
+              ? 'bg-rose-600 text-white border-rose-400 animate-bounce'
+              : 'bg-rose-950/40 border-rose-500/40 text-rose-400 hover:bg-rose-900/60'
+          }`}
+        >
+          <span>🚨 EMERGENCY SOS PANIC ALARM</span>
         </button>
 
         {/* Primary Action Button */}

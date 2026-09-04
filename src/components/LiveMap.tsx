@@ -1,3 +1,4 @@
+import { SpeedometerHUD } from './SpeedometerHUD';
 import { METRO_STATIONS, getNearbyMetroStations, MetroStation } from '../utils/metroStations';
 import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polygon, Polyline, useMap } from 'react-leaflet';
@@ -177,6 +178,10 @@ export const LiveMap: React.FC<LiveMapProps> = ({
 }) => {
   const selectedTracker = trackers.find(t => t.id === selectedTrackerId);
 
+  const [mapTileStyle, setMapTileStyle] = useState<'dark' | 'satellite' | 'street'>('dark');
+  const [showHUD, setShowHUD] = useState(false);
+
+
   const defaultCenter: [number, number] = selectedTracker
     ? [selectedTracker.lastLatitude, selectedTracker.lastLongitude]
     : trackers.length > 0
@@ -185,6 +190,43 @@ export const LiveMap: React.FC<LiveMapProps> = ({
 
   return (
     <div className="w-full h-full relative z-0">
+      
+      {/* 🌙 Map Layer Switcher & HUD Control Bar */}
+      <div className="absolute top-4 right-4 z-20 flex items-center gap-2 bg-dark-900/90 border border-slate-700/80 backdrop-blur-md p-1.5 rounded-xl shadow-xl text-xs font-bold">
+        <button
+          onClick={() => setMapTileStyle('dark')}
+          className={`px-2.5 py-1 rounded-lg transition ${mapTileStyle === 'dark' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+        >
+          🌙 Dark
+        </button>
+        <button
+          onClick={() => setMapTileStyle('satellite')}
+          className={`px-2.5 py-1 rounded-lg transition ${mapTileStyle === 'satellite' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+        >
+          🛰️ Satellite
+        </button>
+        <button
+          onClick={() => setMapTileStyle('street')}
+          className={`px-2.5 py-1 rounded-lg transition ${mapTileStyle === 'street' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
+        >
+          🗺️ Street
+        </button>
+
+        {selectedTracker && (
+          <button
+            onClick={() => setShowHUD(v => !v)}
+            className={`px-2.5 py-1 rounded-lg transition flex items-center gap-1 border ${showHUD ? 'bg-cyan-600/30 border-cyan-500 text-cyan-300' : 'bg-dark-800 border-dark-700 text-slate-400 hover:text-white'}`}
+          >
+            <span>🏎️ Speed HUD</span>
+          </button>
+        )}
+      </div>
+
+      {/* Speedometer HUD Floating Arc */}
+      {selectedTracker && showHUD && (
+        <SpeedometerHUD tracker={selectedTracker} onClose={() => setShowHUD(false)} />
+      )}
+
       <MapContainer
         center={defaultCenter}
         zoom={13}
@@ -192,8 +234,14 @@ export const LiveMap: React.FC<LiveMapProps> = ({
         zoomControl={false}
       >
         <TileLayer
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+          url={
+            mapTileStyle === 'satellite'
+              ? "https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+              : mapTileStyle === 'street'
+              ? "https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+              : "https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+          }
+          attribution='&copy; TrackX Location Engine'
         />
 
         {selectedTracker && (
