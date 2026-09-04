@@ -383,6 +383,31 @@ export const MobileTrackerMode: React.FC<MobileTrackerModeProps> = ({
           <span className={`w-3 h-3 rounded-full ${isTracking ? 'bg-emerald-400 animate-ping' : 'bg-slate-600'}`} />
         </div>
 
+        
+        {/* Interactive Battery Level Calibrator / Slider */}
+        <div className="bg-dark-900 p-3.5 rounded-2xl border border-dark-700 space-y-2">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-300">
+            <div className="flex items-center gap-1.5">
+              <Battery className={`w-4 h-4 ${battery <= 20 ? 'text-rose-400' : battery <= 50 ? 'text-amber-400' : 'text-emerald-400'}`} />
+              <span>Connected Device Battery</span>
+            </div>
+            <span className={`font-mono font-extrabold ${battery <= 20 ? 'text-rose-400' : battery <= 50 ? 'text-amber-400' : 'text-emerald-400'}`}>
+              {battery}%
+            </span>
+          </div>
+          <input
+            type="range"
+            min="1"
+            max="100"
+            value={battery}
+            onChange={e => setBattery(Number(e.target.value))}
+            className="w-full h-2 bg-dark-700 rounded-lg appearance-none cursor-pointer accent-emerald-400"
+          />
+          <p className="text-[10px] text-slate-500">
+            Adjust slider to set exact device battery percentage sent in live telemetry stream.
+          </p>
+        </div>
+
         {/* Device Code Input / Selector */}
         <div className="bg-dark-900 p-3.5 rounded-2xl border border-dark-700 space-y-1.5">
           <label className="text-[10px] font-bold text-slate-400 uppercase block">Paired Hardware Tracker Code</label>
