@@ -89,6 +89,9 @@ function createRouteEndpointIcon(type: 'start' | 'end') {
 
 interface LiveMapProps {
   showMetroStations?: boolean;
+  mapTileStyle?: 'dark' | 'satellite' | 'street';
+  showHUD?: boolean;
+  onCloseHUD?: () => void;
   trackers: Tracker[];
   selectedTrackerId: string | null;
   onSelectTracker: (id: string) => void;
@@ -174,12 +177,15 @@ export const LiveMap: React.FC<LiveMapProps> = ({
   onSelectTracker,
   geofences,
   showMetroStations = false,
+  mapTileStyle = 'dark',
+  showHUD = false,
+  onCloseHUD,
   routeCoords
 }) => {
   const selectedTracker = trackers.find(t => t.id === selectedTrackerId);
 
-  const [mapTileStyle, setMapTileStyle] = useState<'dark' | 'satellite' | 'street'>('dark');
-  const [showHUD, setShowHUD] = useState(false);
+  
+  
 
 
   const defaultCenter: [number, number] = selectedTracker
@@ -191,40 +197,11 @@ export const LiveMap: React.FC<LiveMapProps> = ({
   return (
     <div className="w-full h-full relative z-0">
       
-      {/* 🌙 Map Layer Switcher & HUD Control Bar */}
-      <div className="absolute top-4 right-4 z-20 flex items-center gap-2 bg-dark-900/90 border border-slate-700/80 backdrop-blur-md p-1.5 rounded-xl shadow-xl text-xs font-bold">
-        <button
-          onClick={() => setMapTileStyle('dark')}
-          className={`px-2.5 py-1 rounded-lg transition ${mapTileStyle === 'dark' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
-        >
-          🌙 Dark
-        </button>
-        <button
-          onClick={() => setMapTileStyle('satellite')}
-          className={`px-2.5 py-1 rounded-lg transition ${mapTileStyle === 'satellite' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
-        >
-          🛰️ Satellite
-        </button>
-        <button
-          onClick={() => setMapTileStyle('street')}
-          className={`px-2.5 py-1 rounded-lg transition ${mapTileStyle === 'street' ? 'bg-indigo-600 text-white' : 'text-slate-400 hover:text-white'}`}
-        >
-          🗺️ Street
-        </button>
 
-        {selectedTracker && (
-          <button
-            onClick={() => setShowHUD(v => !v)}
-            className={`px-2.5 py-1 rounded-lg transition flex items-center gap-1 border ${showHUD ? 'bg-cyan-600/30 border-cyan-500 text-cyan-300' : 'bg-dark-800 border-dark-700 text-slate-400 hover:text-white'}`}
-          >
-            <span>🏎️ Speed HUD</span>
-          </button>
-        )}
-      </div>
 
       {/* Speedometer HUD Floating Arc */}
       {selectedTracker && showHUD && (
-        <SpeedometerHUD tracker={selectedTracker} onClose={() => setShowHUD(false)} />
+        <SpeedometerHUD tracker={selectedTracker} onClose={() => onCloseHUD && onCloseHUD()} />
       )}
 
       <MapContainer

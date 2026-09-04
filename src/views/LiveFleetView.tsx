@@ -79,6 +79,9 @@ export const LiveFleetView: React.FC<LiveFleetViewProps> = ({
   const [proximityExpanded, setProximityExpanded] = useState(true);
   const [isWaysToReachOpen, setIsWaysToReachOpen] = useState(false);
   const [isShareModalOpen, setIsShareModalOpen] = useState(false);
+  const [mapTileStyle, setMapTileStyle] = useState<'dark' | 'satellite' | 'street'>('dark');
+  const [showHUD, setShowHUD] = useState(false);
+
   const [showMetroStations, setShowMetroStations] = useState(true);
 
 
@@ -287,8 +290,71 @@ export const LiveFleetView: React.FC<LiveFleetViewProps> = ({
           <span>Asset Roster ({filteredTrackers.length})</span>
         </button>
 
-        <LiveMap
+        
+      {/* 🚀 Prominent Top Header Bar for Map View Style & Cockpit HUD Controls */}
+      <div className="w-full flex flex-wrap items-center justify-between bg-dark-900 border-b border-dark-700 px-4 py-2.5 gap-2 z-10 shrink-0">
+        <div className="flex items-center gap-3">
+          <span className="text-xs font-black text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+            <span className="w-2 h-2 rounded-full bg-indigo-500 animate-pulse" />
+            MAP VIEW STYLE:
+          </span>
+          <div className="flex items-center gap-1 bg-dark-800 border border-dark-700 p-1 rounded-xl shadow-inner">
+            <button
+              onClick={() => setMapTileStyle('dark')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition flex items-center gap-1.5 ${
+                mapTileStyle === 'dark'
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 border border-indigo-500/50'
+                  : 'text-slate-400 hover:text-white hover:bg-dark-700/50'
+              }`}
+            >
+              <span>🌙 Dark Midnight</span>
+            </button>
+
+            <button
+              onClick={() => setMapTileStyle('satellite')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition flex items-center gap-1.5 ${
+                mapTileStyle === 'satellite'
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 border border-indigo-500/50'
+                  : 'text-slate-400 hover:text-white hover:bg-dark-700/50'
+              }`}
+            >
+              <span>🛰️ Satellite Hybrid</span>
+            </button>
+
+            <button
+              onClick={() => setMapTileStyle('street')}
+              className={`px-3 py-1.5 rounded-lg text-xs font-extrabold transition flex items-center gap-1.5 ${
+                mapTileStyle === 'street'
+                  ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-600/30 border border-indigo-500/50'
+                  : 'text-slate-400 hover:text-white hover:bg-dark-700/50'
+              }`}
+            >
+              <span>🗺️ Street View</span>
+            </button>
+          </div>
+        </div>
+
+        <div className="flex items-center gap-2">
+          {selectedTracker && (
+            <button
+              onClick={() => setShowHUD(v => !v)}
+              className={`px-3 py-1.5 rounded-xl text-xs font-extrabold transition flex items-center gap-1.5 border ${
+                showHUD
+                  ? 'bg-cyan-600/20 border-cyan-500 text-cyan-300 shadow-lg shadow-cyan-500/20'
+                  : 'bg-dark-800 border-dark-700 text-slate-300 hover:text-white'
+              }`}
+            >
+              <span>🏎️ Cockpit Speed HUD</span>
+            </button>
+          )}
+        </div>
+      </div>
+
+      <LiveMap
         showMetroStations={showMetroStations}
+        mapTileStyle={mapTileStyle}
+        showHUD={showHUD}
+        onCloseHUD={() => setShowHUD(false)}
           trackers={filteredTrackers}
           selectedTrackerId={selectedTrackerId}
           onSelectTracker={setSelectedTrackerId}
