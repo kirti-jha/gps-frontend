@@ -1,3 +1,5 @@
+import { WaysToReachModal } from '../components/WaysToReachModal';
+import { RouteOption } from '../utils/waysToReach';
 import React, { useState, useEffect, useCallback } from 'react';
 import {
   Search, Gauge, Battery, RefreshCw, ChevronDown, List, Navigation,
@@ -72,6 +74,9 @@ export const LiveFleetView: React.FC<LiveFleetViewProps> = ({
 
   // Proximity panel collapse
   const [proximityExpanded, setProximityExpanded] = useState(true);
+  const [isWaysToReachOpen, setIsWaysToReachOpen] = useState(false);
+  const [showMetroStations, setShowMetroStations] = useState(true);
+
 
   // Get dashboard user's location once (for distance calculations)
   useEffect(() => {
@@ -279,6 +284,7 @@ export const LiveFleetView: React.FC<LiveFleetViewProps> = ({
         </button>
 
         <LiveMap
+        showMetroStations={showMetroStations}
           trackers={filteredTrackers}
           selectedTrackerId={selectedTrackerId}
           onSelectTracker={setSelectedTrackerId}

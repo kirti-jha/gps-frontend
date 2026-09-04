@@ -44,6 +44,20 @@ export const MobileTrackerMode: React.FC<MobileTrackerModeProps> = ({
 
   // Telemetry state
   const [battery, setBattery] = useState(90);
+
+  // HTML5 Battery API integration for 100% accurate device battery status
+  useEffect(() => {
+    if (typeof navigator !== 'undefined' && 'getBattery' in navigator) {
+      (navigator as any).getBattery().then((bm: any) => {
+        const syncBattery = () => {
+          setBattery(Math.round(bm.level * 100));
+        };
+        syncBattery();
+        bm.addEventListener('levelchange', syncBattery);
+      }).catch(() => {});
+    }
+  }, []);
+
   const [speed, setSpeed] = useState(0);
   const [heading, setHeading] = useState(0);
   const [accuracy, setAccuracy] = useState(0);

@@ -1,3 +1,4 @@
+import { METRO_STATIONS, getNearbyMetroStations, MetroStation } from '../utils/metroStations';
 import React, { useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polygon, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
@@ -49,6 +50,24 @@ function createTrackerIcon(tracker: Tracker, isSelected: boolean) {
 }
 
 // Route endpoint pin icon
+
+function createMetroStationIcon(station: MetroStation) {
+  const html = `
+    <div style="position: relative; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center;">
+      <div style="
+        width: 26px; height: 26px; border-radius: 50%;
+        background: #1E293B; border: 2px solid ${station.lineColor};
+        box-shadow: 0 2px 8px rgba(0,0,0,0.6);
+        display: flex; align-items: center; justify-content: center;
+        color: white; font-weight: 800; font-size: 11px;
+      ">
+        🚇
+      </div>
+    </div>
+  `;
+  return L.divIcon({ html, className: 'metro-station-icon', iconSize: [32, 32], iconAnchor: [16, 16] });
+}
+
 function createRouteEndpointIcon(type: 'start' | 'end') {
   const isStart = type === 'start';
   const bg = isStart ? '#10B981' : '#EF4444';
@@ -68,6 +87,7 @@ function createRouteEndpointIcon(type: 'start' | 'end') {
 }
 
 interface LiveMapProps {
+  showMetroStations?: boolean;
   trackers: Tracker[];
   selectedTrackerId: string | null;
   onSelectTracker: (id: string) => void;
@@ -81,6 +101,7 @@ export const LiveMap: React.FC<LiveMapProps> = ({
   selectedTrackerId,
   onSelectTracker,
   geofences,
+  showMetroStations = false,
   routeCoords
 }) => {
   const selectedTracker = trackers.find(t => t.id === selectedTrackerId);
@@ -196,6 +217,37 @@ export const LiveMap: React.FC<LiveMapProps> = ({
               icon={createRouteEndpointIcon('end')}
             />
           </>
+        )}
+
+        
+        {/* Render Highlighted Metro Stations */}
+        {showMetroStations && (
+          (selectedTracker
+            ? getNearbyMetroStations(selectedTracker.lastLatitude, selectedTracker.lastLongitude, 8)
+            : METRO_STATIONS
+          ).map(st => (
+            <Marker
+              key={st.id}
+              position={[st.lat, st.lng]}
+              icon={createMetroStationIcon(st)}
+            >
+              <Popup className="custom-popup">
+                <div className="p-2 text-xs space-y-1 font-sans text-slate-800">
+                  <div className="font-extrabold text-slate-900 flex items-center gap-1">
+                    <span>🚇 {st.name}</span>
+                  </div>
+                  <div className="inline-block px-2 py-0.5 rounded text-[10px] font-bold text-white" style={{ backgroundColor: st.lineColor }}>
+                    {st.lineName}
+                  </div>
+                  {selectedTracker && (
+                    <div className="text-[10px] text-slate-600 border-t border-slate-200 pt-1">
+                      Distance to asset: <strong>{st.distanceKm} km</strong>
+                    </div>
+                  )}
+                </div>
+              </Popup>
+            </Marker>
+          ))
         )}
 
         {/* Render Trackers */}
