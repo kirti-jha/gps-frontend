@@ -1,5 +1,5 @@
 import { METRO_STATIONS, getNearbyMetroStations, MetroStation } from '../utils/metroStations';
-import React, { useEffect } from 'react';
+import React, { useState, useEffect } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, Circle, Polygon, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import { Tracker, Geofence } from '../types';
@@ -95,6 +95,77 @@ interface LiveMapProps {
   /** Shortest route coords in [lat, lng][] (Leaflet format) */
   routeCoords?: [number, number][];
 }
+
+
+// Animated Tracker Marker for Smooth Real-Life Vehicle Motion (Glide effect)
+const AnimatedTrackerMarker: React.FC<{
+  tracker: Tracker;
+  isSelected: boolean;
+  onSelectTracker: (id: string) => void;
+}> = ({ tracker, isSelected, onSelectTracker }) => {
+  const [currentPos, setCurrentPos] = useState<[number, number]>([tracker.lastLatitude, tracker.lastLongitude]);
+  const prevTargetRef = React.useRef<[number, number]>([tracker.lastLatitude, tracker.lastLongitude]);
+
+  useEffect(() => {
+    const targetPos: [number, number] = [tracker.lastLatitude, tracker.lastLongitude];
+    const prevPos = prevTargetRef.current;
+
+    // If position hasn't changed noticeably, skip animation
+    if (Math.abs(prevPos[0] - targetPos[0]) < 0.000001 && Math.abs(prevPos[1] - targetPos[1]) < 0.000001) {
+      return;
+    }
+
+    prevTargetRef.current = targetPos;
+
+    let animId: number;
+    let startTime: number | null = null;
+    const duration = 1200; // 1.2s smooth glide animation
+
+    const animate = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const elapsed = timestamp - startTime;
+      const progress = Math.min(1, elapsed / duration);
+      // Quad ease-out curve
+      const ease = 1 - (1 - progress) * (1 - progress);
+
+      const lat = prevPos[0] + (targetPos[0] - prevPos[0]) * ease;
+      const lng = prevPos[1] + (targetPos[1] - prevPos[1]) * ease;
+
+      setCurrentPos([lat, lng]);
+
+      if (progress < 1) {
+        animId = requestAnimationFrame(animate);
+      }
+    };
+
+    animId = requestAnimationFrame(animate);
+    return () => cancelAnimationFrame(animId);
+  }, [tracker.lastLatitude, tracker.lastLongitude]);
+
+  return (
+    <Marker
+      position={currentPos}
+      icon={createTrackerIcon(tracker, isSelected)}
+      eventHandlers={{
+        click: () => onSelectTracker(tracker.id)
+      }}
+    >
+      <Popup className="custom-popup">
+        <div className="p-2 text-xs space-y-1 text-slate-800 font-sans">
+          <div className="font-bold text-sm text-slate-900">{tracker.deviceName}</div>
+          <div className="font-mono text-[10px] text-blue-600 font-semibold">{tracker.trackerCode}</div>
+          <div className="flex items-center justify-between gap-4 border-t border-slate-200 pt-1">
+            <span>Speed: <strong>{Math.round(tracker.lastSpeed)} km/h</strong></span>
+            <span>Battery: <strong>{tracker.batteryLevel}%</strong></span>
+          </div>
+          <div className="text-[10px] text-slate-500">
+            Accuracy: ±{tracker.lastAccuracy}m | Last seen: {new Date(tracker.lastSeen).toLocaleTimeString()}
+          </div>
+        </div>
+      </Popup>
+    </Marker>
+  );
+};
 
 export const LiveMap: React.FC<LiveMapProps> = ({
   trackers,
@@ -250,34 +321,15 @@ export const LiveMap: React.FC<LiveMapProps> = ({
           ))
         )}
 
-        {/* Render Trackers */}
-        {trackers.map(tracker => {
-          const isSelected = tracker.id === selectedTrackerId;
-          return (
-            <Marker
-              key={tracker.id}
-              position={[tracker.lastLatitude, tracker.lastLongitude]}
-              icon={createTrackerIcon(tracker, isSelected)}
-              eventHandlers={{
-                click: () => onSelectTracker(tracker.id)
-              }}
-            >
-              <Popup className="custom-popup">
-                <div className="p-2 text-xs space-y-1 text-slate-800 font-sans">
-                  <div className="font-bold text-sm text-slate-900">{tracker.deviceName}</div>
-                  <div className="font-mono text-[10px] text-blue-600 font-semibold">{tracker.trackerCode}</div>
-                  <div className="flex items-center justify-between gap-4 border-t border-slate-200 pt-1">
-                    <span>Speed: <strong>{Math.round(tracker.lastSpeed)} km/h</strong></span>
-                    <span>Battery: <strong>{tracker.batteryLevel}%</strong></span>
-                  </div>
-                  <div className="text-[10px] text-slate-500">
-                    Accuracy: ±{tracker.lastAccuracy}m | Last seen: {new Date(tracker.lastSeen).toLocaleTimeString()}
-                  </div>
-                </div>
-              </Popup>
-            </Marker>
-          );
-        })}
+        {/* Render Trackers with Smooth Live Motion */}
+        {trackers.map(tracker => (
+          <AnimatedTrackerMarker
+            key={tracker.id}
+            tracker={tracker}
+            isSelected={tracker.id === selectedTrackerId}
+            onSelectTracker={onSelectTracker}
+          />
+        ))}
       </MapContainer>
     </div>
   );
