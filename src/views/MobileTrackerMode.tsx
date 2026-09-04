@@ -252,7 +252,27 @@ export const MobileTrackerMode: React.FC<MobileTrackerModeProps> = ({
         watchIdRef.current = navigator.geolocation.watchPosition(
           pos => {
             const { latitude, longitude, speed: rawSpeed, heading: rawHeading, accuracy: currentAccuracy } = pos.coords;
-            const currentSpeed = rawSpeed ? Math.round(rawSpeed * 3.6) : Math.floor(15 + Math.random() * 25);
+            // 100% Physical Speed Calculation: Strict 0 km/h when stationary
+            let currentSpeed = 0;
+            if (rawSpeed && rawSpeed > 0.5) {
+              currentSpeed = Math.round(rawSpeed * 3.6);
+            } else if (lastCoords) {
+              // Calculate Haversine distance moved between pings
+              const R = 6371;
+              const dLat = ((latitude - lastCoords.lat) * Math.PI) / 180;
+              const dLng = ((longitude - lastCoords.lng) * Math.PI) / 180;
+              const a = Math.sin(dLat / 2) ** 2 + Math.cos((lastCoords.lat * Math.PI) / 180) * Math.cos((latitude * Math.PI) / 180) * Math.sin(dLng / 2) ** 2;
+              const distKm = R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+              // If movement < 5 meters (0.005 km), device is stationary at rest (0 km/h)
+              if (distKm < 0.005) {
+                currentSpeed = 0;
+              } else {
+                currentSpeed = Math.min(120, Math.round(distKm * 3600 / 3));
+              }
+            } else {
+              currentSpeed = 0;
+            }
             const currentHeading = rawHeading ?? Math.floor(Math.random() * 360);
 
             setLocationSource('GPS');
