@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Smartphone, Plus, QrCode, Shield, CheckCircle, RefreshCw, Battery, Radio } from 'lucide-react';
+import { Smartphone, Plus, QrCode, Shield, CheckCircle, RefreshCw, Battery, Radio, Trash2, AlertTriangle, X } from 'lucide-react';
 import { Tracker } from '../types';
 import { apiRequest } from '../services/api';
 
@@ -7,7 +7,6 @@ interface DeviceManagerViewProps {
   trackers: Tracker[];
   onRefresh: () => void;
 }
-
 
 function detectPlatform(): 'Android' | 'iOS' | 'Web Simulator' {
   if (typeof navigator === 'undefined') return 'Android';
@@ -26,6 +25,11 @@ export const DeviceManagerView: React.FC<DeviceManagerViewProps> = ({ trackers, 
   const [platform, setPlatform] = useState<'Android' | 'iOS' | 'Web Simulator'>(detectPlatform());
   const [newTracker, setNewTracker] = useState<Tracker | null>(null);
 
+  // Remove device state & confirmation popup
+  const [deviceToRemove, setDeviceToRemove] = useState<Tracker | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
+
   const handleCreateTracker = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
@@ -37,6 +41,22 @@ export const DeviceManagerView: React.FC<DeviceManagerViewProps> = ({ trackers, 
       onRefresh();
     } catch (err) {
       console.error('Failed to register tracker:', err);
+    }
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!deviceToRemove) return;
+    setIsDeleting(true);
+    setDeleteError(null);
+    try {
+      await apiRequest(`/trackers/${deviceToRemove.id}`, { method: 'DELETE' });
+      setDeviceToRemove(null);
+      onRefresh();
+    } catch (err: any) {
+      console.error('Failed to remove tracker device:', err);
+      setDeleteError(err.message || 'Failed to remove device. Please try again.');
+    } finally {
+      setIsDeleting(false);
     }
   };
 
@@ -78,13 +98,24 @@ export const DeviceManagerView: React.FC<DeviceManagerViewProps> = ({ trackers, 
                   <span className="font-mono text-xs text-blue-400 font-bold">{tracker.trackerCode}</span>
                 </div>
               </div>
-              <span className={`px-2 py-0.5 text-[10px] font-extrabold rounded-full ${
-                tracker.trackingStatus === 'ONLINE' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
-                tracker.trackingStatus === 'IDLE' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
-                'bg-slate-500/20 text-slate-400 border border-slate-500/30'
-              }`}>
-                {tracker.trackingStatus}
-              </span>
+              <div className="flex items-center gap-2">
+                <span className={`px-2 py-0.5 text-[10px] font-extrabold rounded-full ${
+                  tracker.trackingStatus === 'ONLINE' ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' :
+                  tracker.trackingStatus === 'IDLE' ? 'bg-amber-500/20 text-amber-400 border border-amber-500/30' :
+                  'bg-slate-500/20 text-slate-400 border border-slate-500/30'
+                }`}>
+                  {tracker.trackingStatus}
+                </span>
+
+                {/* Trash / Delete Button */}
+                <button
+                  onClick={() => setDeviceToRemove(tracker)}
+                  className="p-1.5 rounded-lg bg-rose-500/10 text-rose-400 hover:bg-rose-500 hover:text-white border border-rose-500/20 transition"
+                  title="Remove Device"
+                >
+                  <Trash2 className="w-3.5 h-3.5" />
+                </button>
+              </div>
             </div>
 
             <div className="bg-dark-900/60 p-3 rounded-xl border border-dark-700/50 text-xs space-y-1.5 text-slate-300">
@@ -109,7 +140,7 @@ export const DeviceManagerView: React.FC<DeviceManagerViewProps> = ({ trackers, 
         ))}
       </div>
 
-      {/* Modal */}
+      {/* Registration Modal */}
       {showModal && (
         <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
           <div className="bg-dark-800 border border-dark-700 rounded-2xl w-full max-w-md p-6 space-y-4 shadow-2xl">
@@ -124,7 +155,7 @@ export const DeviceManagerView: React.FC<DeviceManagerViewProps> = ({ trackers, 
                   <input
                     type="text"
                     required
-                    placeholder="e.g. Samsung Galaxy S24 (Rahul - Van #4)"
+                    placeholder="e.g. Apple iPhone (Kirti - Asset #1)"
                     value={deviceName}
                     onChange={e => setDeviceName(e.target.value)}
                     className="w-full bg-dark-900 border border-dark-600 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500"
@@ -137,8 +168,8 @@ export const DeviceManagerView: React.FC<DeviceManagerViewProps> = ({ trackers, 
                     onChange={e => setPlatform(e.target.value as any)}
                     className="w-full bg-dark-900 border border-dark-600 rounded-xl px-3 py-2 text-slate-200 focus:outline-none focus:border-blue-500"
                   >
-                    <option value="Android">Android</option>
                     <option value="iOS">iOS (Apple iPhone)</option>
+                    <option value="Android">Android</option>
                     <option value="Web Simulator">Web Tracker PWA</option>
                   </select>
                 </div>
@@ -152,27 +183,33 @@ export const DeviceManagerView: React.FC<DeviceManagerViewProps> = ({ trackers, 
                   </button>
                   <button
                     type="submit"
-                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-md shadow-blue-600/30"
+                    className="px-4 py-2 rounded-xl bg-blue-600 hover:bg-blue-500 text-white font-bold text-xs shadow-lg shadow-blue-600/30"
                   >
-                    Generate Tracker Key
+                    Generate Tracker
                   </button>
                 </div>
               </form>
             ) : (
-              <div className="text-center space-y-4">
-                <div className="bg-dark-900 p-4 rounded-2xl border border-dark-700 space-y-2">
-                  <div className="text-xs text-slate-400 font-bold uppercase">PAIRED TRACKER CODE</div>
-                  <div className="text-2xl font-mono font-extrabold text-blue-400">{newTracker.trackerCode}</div>
-                  <div className="text-[11px] text-slate-400">{newTracker.deviceName}</div>
+              <div className="space-y-4 text-xs">
+                <div className="p-4 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400 space-y-1">
+                  <div className="font-bold flex items-center gap-1.5">
+                    <CheckCircle className="w-4 h-4" /> Device Identity Registered Successfully!
+                  </div>
+                  <div>Device: <strong>{newTracker.deviceName}</strong></div>
+                  <div>Code: <strong className="font-mono">{newTracker.trackerCode}</strong></div>
                 </div>
-
-                <div className="p-3 bg-blue-500/10 border border-blue-500/20 rounded-xl text-xs text-blue-300">
-                  Enter this code into the Mobile Tracker Client app or PWA to pair this phone as hardware.
+                <div>
+                  <label className="block text-slate-400 mb-1 font-bold">Device API Key (Device Secret)</label>
+                  <div className="p-3 bg-dark-950 border border-dark-700 rounded-xl font-mono text-cyan-300 text-[11px] break-all select-all">
+                    {(newTracker as any).apiKey}
+                  </div>
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Save this API key into the mobile device app settings. It will not be shown again.
+                  </p>
                 </div>
-
                 <button
                   onClick={() => setShowModal(false)}
-                  className="w-full py-2.5 bg-blue-600 text-white font-bold text-xs rounded-xl"
+                  className="w-full py-2 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl"
                 >
                   Done
                 </button>
@@ -181,6 +218,67 @@ export const DeviceManagerView: React.FC<DeviceManagerViewProps> = ({ trackers, 
           </div>
         </div>
       )}
+
+      {/* Confirmation Modal for Removing Device */}
+      {deviceToRemove && (
+        <div className="fixed inset-0 z-50 bg-black/75 backdrop-blur-md flex items-center justify-center p-4 animate-fadeIn">
+          <div className="bg-dark-900 border border-rose-500/30 rounded-2xl w-full max-w-md p-6 space-y-5 shadow-2xl relative">
+            <button
+              onClick={() => setDeviceToRemove(null)}
+              className="absolute top-4 right-4 p-1 rounded-lg bg-dark-800 text-slate-400 hover:text-white"
+            >
+              <X className="w-4 h-4" />
+            </button>
+
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 rounded-2xl bg-rose-500/20 border border-rose-500/30 flex items-center justify-center text-rose-400 shrink-0">
+                <AlertTriangle className="w-6 h-6" />
+              </div>
+              <div>
+                <h3 className="text-base font-extrabold text-white">Remove Tracker Device?</h3>
+                <p className="text-xs text-rose-400 font-medium">This action cannot be undone.</p>
+              </div>
+            </div>
+
+            <div className="p-3.5 bg-dark-950 border border-dark-700 rounded-xl text-xs text-slate-300 space-y-2">
+              <p>
+                Are you sure you want to remove <strong className="text-white">{deviceToRemove.deviceName}</strong> (<span className="font-mono text-cyan-400">{deviceToRemove.trackerCode}</span>)?
+              </p>
+              <ul className="list-disc pl-4 text-[11px] text-slate-400 space-y-1">
+                <li>Device pairing and API keys will be deleted.</li>
+                <li>Location telemetry from this mobile phone will stop.</li>
+              </ul>
+            </div>
+
+            {deleteError && (
+              <div className="p-2.5 bg-rose-500/10 border border-rose-500/30 rounded-xl text-xs text-rose-400">
+                {deleteError}
+              </div>
+            )}
+
+            <div className="flex items-center justify-end gap-2.5 pt-1">
+              <button
+                type="button"
+                onClick={() => setDeviceToRemove(null)}
+                disabled={isDeleting}
+                className="px-4 py-2.5 rounded-xl bg-dark-700 hover:bg-dark-600 text-slate-300 font-semibold text-xs transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDelete}
+                disabled={isDeleting}
+                className="px-4 py-2.5 rounded-xl bg-rose-600 hover:bg-rose-500 text-white font-bold text-xs shadow-lg shadow-rose-600/30 flex items-center gap-2 transition"
+              >
+                <Trash2 className="w-3.5 h-3.5" />
+                <span>{isDeleting ? 'Removing...' : 'Yes, Remove Device'}</span>
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
