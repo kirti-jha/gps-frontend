@@ -388,25 +388,15 @@ export const MobileTrackerMode: React.FC<MobileTrackerModeProps> = ({
         <div className="bg-dark-900 p-5 rounded-2xl border border-dark-700 text-center space-y-3 relative overflow-hidden">
           <div className="text-[11px] font-bold text-slate-400 uppercase tracking-wider">LIVE TELEMETRY STREAM</div>
 
-          <div className="flex items-center justify-center gap-4 py-2">
+          <div className="flex items-center justify-center gap-8 py-2">
             <div className="text-center">
               <div className="text-3xl font-extrabold text-blue-400 font-sans">{speed}</div>
               <div className="text-[10px] text-slate-400 font-bold">KM/H SPEED</div>
             </div>
             <div className="w-px h-10 bg-dark-700" />
             <div className="text-center">
-              <div className="text-3xl font-extrabold text-emerald-400 font-sans flex items-center justify-center gap-1">
-                <span>{battery}%</span>
-                {isCharging && <span className="text-xs text-amber-400 animate-pulse">⚡</span>}
-              </div>
-              <div className="text-[10px] text-slate-400 font-bold">
-                {isCharging ? 'HARDWARE CHARGING' : 'REAL BATTERY'}
-              </div>
-            </div>
-            <div className="w-px h-10 bg-dark-700" />
-            <div className="text-center">
               <div className="text-3xl font-extrabold text-cyan-400 font-sans">±{accuracy}m</div>
-              <div className="text-[10px] text-slate-400 font-bold">ACCURACY</div>
+              <div className="text-[10px] text-slate-400 font-bold">GPS ACCURACY</div>
             </div>
           </div>
 

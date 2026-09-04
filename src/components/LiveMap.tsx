@@ -156,7 +156,7 @@ const AnimatedTrackerMarker: React.FC<{
           <div className="font-mono text-[10px] text-blue-600 font-semibold">{tracker.trackerCode}</div>
           <div className="flex items-center justify-between gap-4 border-t border-slate-200 pt-1">
             <span>Speed: <strong>{Math.round(tracker.lastSpeed)} km/h</strong></span>
-            <span>Battery: <strong>{tracker.batteryLevel}%</strong></span>
+            <span>Status: <strong>{tracker.trackingStatus}</strong></span>
           </div>
           <div className="text-[10px] text-slate-500">
             Accuracy: ±{tracker.lastAccuracy}m | Last seen: {new Date(tracker.lastSeen).toLocaleTimeString()}

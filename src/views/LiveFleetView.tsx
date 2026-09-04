@@ -318,19 +318,13 @@ export const LiveFleetView: React.FC<LiveFleetViewProps> = ({
             </div>
 
             {/* ── Telemetry Grid ── */}
-            <div className="grid grid-cols-3 gap-2 text-center py-1">
-              <div className="bg-dark-900/80 p-1.5 sm:p-2 rounded-xl border border-dark-700">
-                <div className="text-[9px] sm:text-[10px] text-slate-400">SPEED</div>
+            <div className="grid grid-cols-2 gap-2 text-center py-1">
+              <div className="bg-dark-900/80 p-2 sm:p-2.5 rounded-xl border border-dark-700">
+                <div className="text-[9px] sm:text-[10px] text-slate-400 font-bold">LIVE SPEED</div>
                 <div className="font-extrabold text-xs sm:text-sm text-blue-400">{Math.round(selectedTracker.lastSpeed)} <span className="text-[9px]">km/h</span></div>
               </div>
-              <div className="bg-dark-900/80 p-1.5 sm:p-2 rounded-xl border border-dark-700">
-                <div className="text-[9px] sm:text-[10px] text-slate-400">BATTERY</div>
-                <div className={`font-extrabold text-xs sm:text-sm ${getBatteryColor(selectedTracker.batteryLevel)}`}>
-                  {getBatteryDisplay(selectedTracker.batteryLevel)}
-                </div>
-              </div>
-              <div className="bg-dark-900/80 p-1.5 sm:p-2 rounded-xl border border-dark-700">
-                <div className="text-[9px] sm:text-[10px] text-slate-400">GPS ±</div>
+              <div className="bg-dark-900/80 p-2 sm:p-2.5 rounded-xl border border-dark-700">
+                <div className="text-[9px] sm:text-[10px] text-slate-400 font-bold">GPS ACCURACY</div>
                 <div className="font-extrabold text-xs sm:text-sm text-cyan-400">±{selectedTracker.lastAccuracy}m</div>
               </div>
             </div>

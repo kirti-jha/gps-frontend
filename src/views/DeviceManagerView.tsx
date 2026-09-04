@@ -123,10 +123,7 @@ export const DeviceManagerView: React.FC<DeviceManagerViewProps> = ({ trackers, 
                 <span className="text-slate-400">Platform OS:</span>
                 <span className="font-semibold">{tracker.platform}</span>
               </div>
-              <div className="flex justify-between">
-                <span className="text-slate-400">Battery Level:</span>
-                <span className="font-semibold">{tracker.batteryLevel}%</span>
-              </div>
+              
               <div className="flex justify-between">
                 <span className="text-slate-400">Telemetry Rate:</span>
                 <span className="font-mono text-cyan-400 font-bold">Adaptive (3s - 30s)</span>

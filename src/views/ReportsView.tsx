@@ -23,14 +23,14 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ trackers }) => {
   }, []);
 
   const exportCSV = () => {
-    const headers = ['Tracker Code', 'Device Name', 'Platform', 'Status', 'Speed (km/h)', 'Battery (%)', 'Last Latitude', 'Last Longitude', 'Last Seen'];
+    const headers = ['Tracker Code', 'Device Name', 'Platform', 'Status', 'Speed (km/h)', 'Last Latitude', 'Last Longitude', 'Last Seen'];
     const rows = trackers.map(t => [
       t.trackerCode,
       `"${t.deviceName}"`,
       t.platform,
       t.trackingStatus,
       t.lastSpeed,
-      t.batteryLevel,
+      
       t.lastLatitude,
       t.lastLongitude,
       `"${t.lastSeen}"`
@@ -117,7 +117,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ trackers }) => {
                 <th className="p-3.5">Platform</th>
                 <th className="p-3.5">Status</th>
                 <th className="p-3.5">Speed</th>
-                <th className="p-3.5">Battery</th>
+                
                 <th className="p-3.5">Coordinates</th>
                 <th className="p-3.5">Last Seen</th>
               </tr>
@@ -138,7 +138,7 @@ export const ReportsView: React.FC<ReportsViewProps> = ({ trackers }) => {
                     </span>
                   </td>
                   <td className="p-3.5 font-semibold">{Math.round(t.lastSpeed)} km/h</td>
-                  <td className="p-3.5">{t.batteryLevel}%</td>
+                  
                   <td className="p-3.5 font-mono text-slate-400">{t.lastLatitude.toFixed(4)}, {t.lastLongitude.toFixed(4)}</td>
                   <td className="p-3.5 text-slate-400">{new Date(t.lastSeen).toLocaleTimeString()}</td>
                 </tr>
