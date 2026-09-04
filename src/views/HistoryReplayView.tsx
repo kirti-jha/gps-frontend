@@ -420,7 +420,7 @@ export const HistoryReplayView: React.FC<HistoryReplayViewProps> = ({ trackers }
                         <Gauge className="w-3 h-3 text-blue-400" /> {Math.round(pt.speed)} km/h
                       </span>
                       <span className="flex items-center gap-0.5">
-                        <Battery className={`w-3 h-3 ${pt.battery < 20 ? 'text-rose-400' : 'text-emerald-400'}`} /> {pt.battery}%
+                        
                       </span>
                       <span className="flex items-center gap-0.5">
                         <MapPin className="w-3 h-3 text-cyan-400" /> ±{pt.accuracy}m

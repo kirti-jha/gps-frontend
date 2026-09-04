@@ -245,9 +245,8 @@ export const LiveFleetView: React.FC<LiveFleetViewProps> = ({
                     <Gauge className="w-3.5 h-3.5 text-blue-400" />
                     <span>{Math.round(tracker.lastSpeed)} km/h</span>
                   </div>
-                  <div className="flex items-center gap-1.5">
-                    <Battery className={`w-3.5 h-3.5 ${batteryColor}`} />
-                    <span className={batteryColor}>{batteryDisplay}</span>
+                  <div className="flex items-center gap-1.5 font-sans">
+                    <span className="text-slate-400 font-semibold text-[11px]">{tracker.platform || 'Mobile'}</span>
                   </div>
                 </div>
 

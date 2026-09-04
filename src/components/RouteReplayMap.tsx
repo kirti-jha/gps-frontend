@@ -119,7 +119,7 @@ export const RouteReplayMap: React.FC<RouteReplayMapProps> = ({ points, currentP
               <div className="p-1 text-xs space-y-0.5 text-slate-800">
                 <div className="font-bold">Playback Telemetry</div>
                 <div>Speed: {Math.round(activePoint.speed)} km/h</div>
-                <div>Battery: {activePoint.battery}%</div>
+                
                 <div>Recorded: {new Date(activePoint.recordedAt).toLocaleTimeString()}</div>
               </div>
             </Popup>
