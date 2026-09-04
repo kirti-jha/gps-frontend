@@ -8,10 +8,22 @@ interface DeviceManagerViewProps {
   onRefresh: () => void;
 }
 
+
+function detectPlatform(): 'Android' | 'iOS' | 'Web Simulator' {
+  if (typeof navigator === 'undefined') return 'Android';
+  const ua = navigator.userAgent || '';
+  const platform = navigator.platform || '';
+  if (/iPhone|iPad|iPod/i.test(ua) || (platform === 'MacIntel' && navigator.maxTouchPoints > 1)) {
+    return 'iOS';
+  }
+  if (/Android/i.test(ua)) return 'Android';
+  return 'Android';
+}
+
 export const DeviceManagerView: React.FC<DeviceManagerViewProps> = ({ trackers, onRefresh }) => {
   const [showModal, setShowModal] = useState(false);
   const [deviceName, setDeviceName] = useState('');
-  const [platform, setPlatform] = useState<'Android' | 'iOS' | 'Web Simulator'>('Android');
+  const [platform, setPlatform] = useState<'Android' | 'iOS' | 'Web Simulator'>(detectPlatform());
   const [newTracker, setNewTracker] = useState<Tracker | null>(null);
 
   const handleCreateTracker = async (e: React.FormEvent) => {
